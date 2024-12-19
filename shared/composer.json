@@ -1,0 +1,12 @@
+{
+  "name": "test/shared",
+  "type": "library",
+  "require": {
+    "ecotone/ecotone": "^1.240"
+  },
+  "autoload": {
+    "psr-4": {
+      "Test\\Shared\\": "src/"
+    }
+  }
+}

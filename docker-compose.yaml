@@ -1,0 +1,132 @@
+name: ecotone-test
+
+services:
+  app-setup:
+    build:
+      context: .
+      dockerfile: .docker/app/Dockerfile
+      target: ${APP_ENV:-prod}
+    volumes:
+      - ./backend:/app
+      - ./shared:/shared
+    depends_on:
+      app-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-tier
+    restart: no
+    environment:
+      RUN_MIGRATION: "true"
+      APP_INSTALL_DEPENDENCIES: "yes"
+
+  app-frontend:
+    build:
+      context: .
+      dockerfile: .docker/app/Dockerfile
+      target: ${APP_ENV:-prod}
+    volumes:
+      - ./frontend:/app
+      - ./shared:/shared
+    depends_on:
+      app-projections:
+        condition: service_started
+      app-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - app-tier
+    restart: always
+    entrypoint: ""
+    command: "php /app/src/index.php"
+
+  app-projections:
+    build:
+      context: .
+      dockerfile: .docker/app/Dockerfile
+      target: ${APP_ENV:-prod}
+    env_file:
+      - backend/.env
+    volumes:
+      - ./backend:/app
+      - ./shared:/shared
+    depends_on:
+      app-setup:
+        condition: service_completed_successfully
+      app-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-tier
+    restart: always
+    entrypoint: ""
+    command: "/app/bin/console ecotone:run asynchronous_projections -vvv"
+
+  app-distributed-consumer:
+    build:
+      context: .
+      dockerfile: .docker/app/Dockerfile
+      target: ${APP_ENV:-prod}
+    env_file:
+      - backend/.env
+    volumes:
+      - ./backend:/app
+      - ./shared:/shared
+    depends_on:
+      app-setup:
+        condition: service_completed_successfully
+      app-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-tier
+    restart: always
+    entrypoint: ""
+    command: "/app/bin/console ecotone:run test_service -vvv"
+
+  app-db:
+    image: bitnami/mariadb:latest
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: appdb
+      MARIADB_USER: user
+      MARIADB_PASSWORD: password
+    volumes:
+      - ./backend/config/scripts/mariadb:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+    networks:
+      - app-tier
+    healthcheck:
+      test: [ "CMD", "mariadb", "-u", "root", "-proot", "--execute", "SHOW DATABASES;" ]
+      interval: 3s
+      retries: 5
+      timeout: 5s
+
+  rabbitmq:
+    image: bitnami/rabbitmq:latest
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - .docker/rabbitmq/rabbitmq.conf:/opt/bitnami/rabbitmq/etc/rabbitmq/rabbitmq.conf
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app-tier
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 3s
+      retries: 5
+      timeout: 5s
+
+networks:
+  app-tier:
+    driver: bridge

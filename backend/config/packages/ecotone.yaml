@@ -1,0 +1,7 @@
+ecotone:
+  serviceName: "test_service"
+  defaultErrorChannel: "dbal_dead_letter"
+  loadSrcNamespaces: true
+  namespaces:
+    - "Test\\Shared\\"
+    - "App\\"

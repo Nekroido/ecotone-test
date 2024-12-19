@@ -1,0 +1,22 @@
+{
+    "name": "test/frontend",
+    "type": "project",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Test\\Frontend\\": "src/"
+        }
+    },
+    "require": {
+        "test/shared": "dev-main",
+        "ecotone/amqp": "^1.240",
+        "ecotone/lite-application-starter": "^1.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../shared"
+        }
+    ]
+}

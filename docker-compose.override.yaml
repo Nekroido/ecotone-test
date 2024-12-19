@@ -1,0 +1,13 @@
+services:
+  rabbitmq:
+    volumes:
+      - .docker/rabbitmq/rabbitmq.conf.dev:/opt/bitnami/rabbitmq/etc/rabbitmq/rabbitmq.conf
+
+  app-frontend:
+    restart: no
+
+  app-projections:
+    restart: no
+
+  app-distributed-consumer:
+    restart: no
